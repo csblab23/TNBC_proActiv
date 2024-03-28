@@ -1,0 +1,5 @@
+### Here the result is a summarised object
+#### it was large in size, that's why uploaded in chunks 
+
+## to download use the concatenate command on terminal
+# cat result_chunk_* > result.rds
