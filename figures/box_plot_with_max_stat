@@ -1,0 +1,125 @@
+####New chunk for box plots of genes
+gene = 'ENSG00000040933.16'
+grep(gene, colnames(gene_matrix))
+mod_maxstat <- maxstat.test(Surv(RFS_time_Days, RFS_Status) ~ gene_matrix[, gene],
+                            data = gene_matrix, smethod = "LogRank")
+cutoff_values <- mod_maxstat$estimate
+cutoff_values
+gene_matrix_1 = gene_matrix[,c('Run',gene)]
+gene_matrix_1<- gene_matrix_1 %>% mutate(Binary =  ifelse(gene_matrix[, gene] > cutoff_values, "high", "low"))
+gene_matrix_1[,"Binary" ] <- as.factor(gene_matrix_1[,"Binary" ])
+
+plot_object = ggplot(gene_matrix_1, aes(x = Binary, y = ENSG00000040933.16, fill = `Binary`)) +
+  geom_boxplot(position = "dodge") +
+  stat_compare_means( method = "t.test", label.x.npc = "left",
+                      label.y.npc = "bottom",  ) +  # Add p-values
+  xlab(gene) +
+  ylab("Gene_expression") +
+  scale_fill_discrete(name = NULL)
+ 
+plot_object
+#filename <- paste0("Box-plot_", gsub(" ", "_", sample_col_list[[gene]][i]), ".pdf")
+#ggsave(filename, plot = plot_object, device = "pdf")
+
+### FOR MAKING BOX PLOTS OF PROMOTERS - with cut-off of first one
+gene = 'ENSG00000153107.13'
+gene_idx = list()
+sample_col_list = list()
+indices = grep(gene, result_prom$Gene_names2)
+indices
+gene_idx[[gene]] = indices
+gene_idx
+sample_col_values = character(length(indices))
+for (i in seq_along(indices)){
+  sample_col_values[i] = as.character(result_prom[indices[i],1])
+}
+sample_col_values
+sample_col_list[[gene]] = sample_col_values
+i = 1
+mm_check_subset = prom_matrix[,c('Run', 'RFS_time_Days', 'RFS_Status', sample_col_list[[gene]][i])]
+mm_check_subset_2 = prom_matrix[,c('Run',sample_col_list[[gene]][i+1])]
+mod_maxstat <- maxstat.test(Surv(RFS_time_Days, RFS_Status) ~ mm_check_subset[, 4],
+                            data = mm_check_subset, smethod = "LogRank")
+cutoff_values <- mod_maxstat$estimate
+cutoff_values
+mm_check_subset<- mm_check_subset %>% mutate(Binary =  ifelse(mm_check_subset[, 4] > cutoff_values, "high", "low"))
+mm_check_subset_1 = merge(mm_check_subset, mm_check_subset_2, by = "Run")
+mm_check_subset_1[,"Binary" ] <- as.factor(mm_check_subset_1[,"Binary" ])
+rownames(mm_check_subset_1) = mm_check_subset_1$Run
+mm_check_subset_final = mm_check_subset_1[,c(1, 4:6)]
+
+long_data <- mm_check_subset_final %>%
+  pivot_longer(
+    cols = starts_with("pr"),
+    names_to = "Promoters",
+    values_to = "Expression"
+  ) %>%
+  rename(
+    Sample = 1,
+    Binary = Binary
+  )
+
+
+plot_object = ggplot(long_data, aes(x = Promoters, y = Expression, fill = Binary)) +
+  geom_boxplot(position = "dodge") +
+  stat_compare_means( method = "t.test", label.x.npc = "left",
+                      label.y.npc = "bottom",  ) +  # Add p-values
+  xlab("") +
+  ylab("Absolute_promoter_activity") +
+  scale_fill_discrete(labels = c("low" = paste('Low', sample_col_list[[gene]][i]), "high"= paste('High', sample_col_list[[gene]][i])), name = NULL)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+plot_object
+
+
+
+### FOR MAKING BOX PLOTS OF PROMOTERS - with cut-off of second one
+#gene = 'ENSG000001'
+gene_idx = list()
+sample_col_list = list()
+indices = grep(gene, result_prom$Gene_names2)
+indices
+gene_idx[[gene]] = indices
+gene_idx
+sample_col_values = character(length(indices))
+for (i in seq_along(indices)){
+  sample_col_values[i] = as.character(result_prom[indices[i],1])
+}
+sample_col_values
+sample_col_list[[gene]] = sample_col_values
+i = 2
+mm_check_subset = prom_matrix[,c('Run', 'RFS_time_Days', 'RFS_Status', sample_col_list[[gene]][i])]
+mm_check_subset_2 = prom_matrix[,c('Run',sample_col_list[[gene]][i-1])]
+mod_maxstat <- maxstat.test(Surv(RFS_time_Days, RFS_Status) ~ mm_check_subset[, 4],
+                            data = mm_check_subset, smethod = "LogRank")
+cutoff_values <- mod_maxstat$estimate
+cutoff_values
+mm_check_subset<- mm_check_subset %>% mutate(Binary =  ifelse(mm_check_subset[, 4] > cutoff_values, "high", "low"))
+mm_check_subset_1 = merge(mm_check_subset, mm_check_subset_2, by = "Run")
+mm_check_subset_1[,"Binary" ] <- as.factor(mm_check_subset_1[,"Binary" ])
+rownames(mm_check_subset_1) = mm_check_subset_1$Run
+mm_check_subset_final = mm_check_subset_1[,c(1, 4:6)]
+
+long_data <- mm_check_subset_final %>%
+  pivot_longer(
+    cols = starts_with("pr"),
+    names_to = "Promoters",
+    values_to = "Expression"
+  ) %>%
+  rename(
+    Sample = 1,
+    Binary = Binary
+  )
+
+
+plot_object = ggplot(long_data, aes(x = Promoters, y = Expression, fill = Binary)) +
+  geom_boxplot(position = "dodge") +
+  stat_compare_means( method = "t.test", label.x.npc = "left",
+                      label.y.npc = "bottom",  ) +  # Add p-values
+  xlab("") +
+  ylab("Absolute_promoter_activity") +
+  scale_fill_discrete(labels = c("low" = paste('Low', sample_col_list[[gene]][i]), "high"= paste('High', sample_col_list[[gene]][i])), name = NULL)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+plot_object
+
