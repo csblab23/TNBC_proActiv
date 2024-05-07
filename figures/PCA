@@ -1,0 +1,173 @@
+library("tidyverse")
+setwd("/Users/sherrybhalla/projects/tnbc_promoter_acrivity/PCA_proActiv")
+# load the metafile  
+metadata <- as.data.frame(read_csv("meta_with_batchinfo.csv"))
+metadata[1:5,1:5]
+metadata=metadata[,-1]  # removing the extra s.no. column
+dim(metadata) # 448  98
+colnames(metadata)
+
+# Just keep the required columns
+subset_meta=metadata[,c(1:3,33)]
+dim(subset_meta) #448   4
+colnames(subset_meta)
+# [1] "Project_ID"   "Run"          "batch"        "Tumor_Normal"
+
+table(subset_meta$Tumor_Normal)
+# PairedNormalTissue PairedNormalTissue.rep            TumorTissue       TumorTissue.2018 
+#             83                      5                    216                    115 
+# TumorTissue.rep 
+#             29 
+
+# I will now clean the Tumor_Normal column and mutate to a new column
+subset_meta=subset_meta %>% 
+  mutate(Tumor_Normal1 = case_when(Tumor_Normal=="TumorTissue"  ~ "Tumor",
+                                   Tumor_Normal=="TumorTissue.2018"  ~ "Tumor",
+                                   Tumor_Normal=="TumorTissue.rep"  ~ "Tumor",
+                                   Tumor_Normal=="PairedNormalTissue"  ~ "AdjNormal",
+                                   Tumor_Normal=="PairedNormalTissue.rep"  ~ "AdjNormal"))
+
+table(subset_meta$Tumor_Normal1)
+# AdjNormal     Tumor 
+#       88       360
+
+
+table(subset_meta$batch)
+# batch1 batch2 batch3 
+#   247     86    115 
+
+# Checking for duplicate IDs
+length(unique(subset_meta$Run))  # 448
+
+# Read the feature-count file of FUSCC data 
+count <- as.data.frame(read_csv("Featurecounts_combined_fuscc.csv"))
+count[1:5,1:5]
+count=count[,-1] # remove extra s.no. column
+count[1:5,1:5]
+count <- tibble::column_to_rownames(count, var = "Geneid")
+dim(count) # 62700   448
+
+library(edgeR)
+cpm <- cpm(count)
+dim(cpm) # 40472   448
+# apply filter
+is.exprs <- rowSums(cpm>1) >= 10 #to take sufficiently expressed genes into consideration
+counts2 <- count[is.exprs, ]
+
+x <- DGEList(counts=counts2 )
+#x <- calcNormFactors(x,method = "TMM")
+#v <- voom(x, plot=T)
+
+par(mfrow=c(1,2))
+lcpm <- cpm(x)
+#boxplot(lcpm[,1:100], las=2, main="")
+#title(main="A. Example: Unnormalised data", ylab="Log-cpm")
+#?calcNormFactors
+x1 <- calcNormFactors(x,method = "TMM")
+
+#lcpm <- cpm(x1, log=TRUE)
+#boxplot(lcpm[,1:100], las=2, main="")
+#title(main="B. Example: Normalised data", ylab="Log-cpm")
+
+#plotMDS(x, col = as.numeric(metadata$TNBC))
+#mm <- model.matrix(~0 + metadata$TNBC)
+v <- voom(x, plot=F)
+#?voom
+vMat <- v$E
+dim(vMat)
+vMat[1:5,1:5]
+
+head(subset_meta)
+rownames(subset_meta)=subset_meta[,2]
+subset_meta=subset_meta[colnames(vMat),]
+subset_meta$batch=as.factor(subset_meta$batch)
+exprMat <- sva::ComBat(vMat, batch=subset_meta$batch)
+exprMat[1:5,1:5]
+exprMat1=t(exprMat)
+subset_meta[1:5,1:5]
+dim(exprMat)
+a=merge(subset_meta,exprMat1,by=0)
+a[1:10,1:10]
+dim(a)[2]
+if(!require(devtools)) install.packages("devtools")
+devtools::install_github("kassambara/factoextra")
+library("factoextra")
+iris.pca <- FactoMineR::PCA(a[7:dim(a)[2]], graph = FALSE)
+# Visualize
+a$Tumor_Normal1=as.factor(a$Tumor_Normal1)
+# Use habillage to specify groups for coloring
+fviz_pca_ind(iris.pca,
+             label = "none", # hide individual labels
+             habillage = a$Tumor_Normal1, # color by groups
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE # Concentration ellipses
+)
+
+
+###### edgeR diffrential expression
+d <- DGEList(counts=counts2, group=subset_meta$Tumor_Normal1)  # group is the tumor_normal1 column
+#?DGEList
+
+#Normalize the data
+d <- calcNormFactors(d)
+d <- estimateCommonDisp(d)
+d <- estimateTagwiseDisp(d)
+classes <- subset_meta$Tumor_Normal1
+
+batch <- subset_meta$batch
+length(classes)
+table(classes)
+batch=as.factor(batch)
+
+modelDesign <- model.matrix(~ 0 + classes + batch)
+head(modelDesign)
+dim(modelDesign) #448   2
+table(modelDesign[,1])
+table(modelDesign[,2])
+
+contrast_one <- makeContrasts(
+  onevsrest ="classesTumor-classesAdjNormal",   # Tumor vs Adjacent normal
+  levels=modelDesign)
+head(contrast_one)
+
+fit_glm <- glmFit(d,modelDesign)  ###model fitting
+onevsrest <- glmLRT(fit_glm , contrast = contrast_one)  #performs likelihood ratio tests (LRT) for differential expression
+
+#to extract the top differentially expressed genes from the results of a differential expression analysis
+tt_onevsrest <- topTags(onevsrest,n=nrow(d))
+dim(tt_onevsrest) #25442  
+tt_onevsrest[1:5, 1:5]
+
+toptable=tt_onevsrest$table
+head(toptable)
+dim(toptable) # 25442   5
+#write.csv(toptable,file="toptable_withcombatseq.csv")    #-- in order to write this file out
+
+sel=toptable[toptable$logFC >2 |toptable$logFC < -2 & toptable$FDR <0.05,]
+dim(sel)
+
+
+exprMat[1:5,1:5]
+exprMat1=t(exprMat)
+subset_meta[1:5,1:5]
+dim(exprMat)
+dim(exprMat1)
+
+exprMat1[1:5,1:5]
+exprMat_sel=exprMat1[,rownames(sel)]
+a=merge(subset_meta,exprMat_sel,by=0)
+a[1:10,1:10]
+dim(a)[2]
+#if(!require(devtools)) install.packages("devtools")
+#devtools::install_github("kassambara/factoextra")
+library("factoextra")
+iris.pca <- FactoMineR::PCA(a[7:dim(a)[2]], graph = FALSE)
+# Visualize
+a$Tumor_Normal1=as.factor(a$Tumor_Normal1)
+# Use habillage to specify groups for coloring
+fviz_pca_ind(iris.pca,
+             label = "none", # hide individual labels
+             habillage = a$Tumor_Normal1, # color by groups
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE # Concentration ellipses
+)
