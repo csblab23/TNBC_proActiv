@@ -1,4 +1,6 @@
-#INDIAN_WITH_chinese_gtf
+## RUN ITERATIONS ON INDIAN DATASET:
+## NOTE: These Indian samples were processed using the chinese gtf file
+## 4 RELATIVE LEVELS AND 7 SURV LEVELS
 
 setwd("~/108_TNBCs_reprocessed")
 
