@@ -1,4 +1,6 @@
-#for running the iterations
+## RUN ITERATIONS ON CHINESE DATASET:
+#for running the iterations > 10 counts
+# 4 RELATIVE LEVELS (0.2, 0.25, 0.3, 0.5) AND 7 SURV LEVELS (0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5)  
 
 setwd("~/proActiv/univariate_surv_proActiv")
 
@@ -56,9 +58,9 @@ colnames(promoter_counts) <- gsub("_SJ.out", "", colnames(promoter_counts))
 p_counts <- merge( filtered_df, promoter_counts, by.x = "promoterId", by.y = 'row.names')
 dim(p_counts) ##24120   363
 
-count_level = c(5, 10)
-length(count_level)
-for (i in 1:length(count_level)){
+# count_level = c(5, 10)
+# length(count_level)
+# for (i in 1:length(count_level)){
   gene_lists <- list()
   
   for (sample_col in colnames(p_counts)[4:ncol(p_counts)]) {
@@ -66,13 +68,14 @@ for (i in 1:length(count_level)){
     filtered_genes <- c()
     for (gene in unique(p_counts$geneId)) {
       gene_counts <- p_counts[p_counts$geneId == gene, sample_col]
-      num_ids_gt_threshold <- sum(gene_counts > count_level[i])
+      num_ids_gt_threshold <- sum(gene_counts > 10)
       if (num_ids_gt_threshold >= 2) {
         filtered_genes <- c(filtered_genes, gene)
       }
     }
     gene_lists[[sample_col]] <- filtered_genes
   }
+  
   # #for taking genes that are present in atleast 60% of samples ##---------------------------LEVEL-03
   n_samples <- length(gene_lists)
   ensg_freq <- table(unlist(gene_lists))
@@ -156,7 +159,7 @@ for (i in 1:length(count_level)){
     tobetaken <- rowSums(Ab_counts > 0) >= dim(tumor_metadata)[1]*0.1
     Ab_counts=Ab_counts[tobetaken,]
     dim(Ab_counts) 
-                                                           ####--------------------------------LEVEL- 07
+    ####--------------------------------LEVEL- 07
     surv_level = c(0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5)  
     for (l in 1:length(surv_level)){
       #function for performing surv analysis
@@ -201,348 +204,473 @@ for (i in 1:length(count_level)){
       fdr_g_p_values = p.adjust(unlist(gene_p_values), method = 'fdr')  
       gene_df <- data.frame(sample_ID = names(gene_p_values), p_value = unlist(gene_p_values), fdr_values = fdr_g_p_values)
       
-      #condition for printing out files
-      if (i == 1){
-        setwd("~/proActiv/iteration/5_counts")
-        cat("You are in 5_count working directory")
-        if (j == 1){
-          setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2")
-          cat("you are in 5_count/Rl_PA_0.2 working directory")
-          if (l == 1){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_10%")
-            cat("You are in 5_count/Rl_PA_0.2/surv_top_10% working directory")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 2){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_20%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 3){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_25%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if ( l == 4){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_30%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 5){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_35%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 6){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_40%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 7){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_50%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-         
-        } 
-        else if (j == 2){
-          setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/")
-          cat("you are in 5_count/Rl_PA_0.25 working directory")
-          if (l == 1){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_10%")
-            cat("You are in 5_count/Rl_PA_0.25/surv_top_10% working directory")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 2){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_20%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 3){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_25%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if ( l == 4){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_30%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 5){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_35%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 6){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_40%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 7){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_50%/")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
+      prom_sig_result <- filter(prom_df, p_value < 0.01)
+      prom_sig_result_adj <- filter(prom_df, fdr_value < 0.01)
+      gene_sig_result <- filter(gene_df, p_value < 0.1)
+      gene_sig_result_adj <- filter(gene_df, fdr_values < 0.1)
+      gene_nonsig_result <- filter(gene_df, p_value > 0.1)
+      gene_nonsig_result_adj <- filter(gene_df, fdr_values > 0.1)
+      
+      #intersection lists
+      prom_sig_result_2 = prom_sig_result %>% separate(sample_ID,into =c("Promoter", "Gene_names2"),sep = "_")
+      com_p_g_sig_pv = (intersect(prom_sig_result_2$Gene_names2,gene_sig_result$sample_ID))  #both_sig_p_value
+      com_p_sig_g_nonsig_pv = (intersect(prom_sig_result_2$Gene_names2, gene_nonsig_result$sample_ID)) #by pv
+      com_p_sig_pv_g_nonsig_fdr = (intersect(prom_sig_result_2$Gene_names2, gene_nonsig_result_adj$sample_ID))
+      
+      
+      
+      output <- data.frame(total_prom = dim(prom_df)[1], total_gene = dim(gene_df)[1],
+                           sig_pr_pv = dim(prom_sig_result)[1], sig_pr_fdr = dim(prom_sig_result_adj)[1],
+                           sig_g_pv = dim(gene_sig_result)[1], sig_g_fdr = dim(gene_sig_result_adj)[1],
+                           nonsig_g_pv = dim(gene_nonsig_result)[1], nonsig_g_fdr = dim(gene_nonsig_result_adj),
+                           both_sig_pv = length(com_p_g_sig_pv), p_sig_g_nonsig_pv = length(com_p_sig_g_nonsig_pv),
+                           p_sig_g_nonsig_fdr = length(com_p_sig_pv_g_nonsig_fdr))
+      if (j == 1){
+        if (l == 1){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_10%")
+          cat("You are in 10_count/Rl_PA_0.2/surv_top_10% working directory")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        if (l ==2){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_20%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        if (l == 3){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_25%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
           
         }
-        else if (j == 3){
-          setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/")
-          cat("you are in 5_count/Rl_PA_0.3 working directory")
-          if (l == 1){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_10%")
-            cat("You are in 5_count/Rl_PA_0.3/surv_top_10% working directory")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 2){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_20%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 3){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_25%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if ( l == 4){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_30%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 5){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_35%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 6){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_40%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 7){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_50%/")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          
+        if ( l ==4){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_30%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
         }
-        else {
-          setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/")
-          cat("you are in 5_count/Rl_PA_0.5 working directory")
-          if (l == 1){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_10%")
-            cat("You are in 5_count/Rl_PA_0.5/surv_top_10% working directory")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 2){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_20%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 3){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_25%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if ( l == 4){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_30%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 5){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_35%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 6){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_40%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 7){
-            setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_50%/")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-        } 
-          
-      } 
-      else {
-        setwd("~/proActiv/iteration/10_counts")
-        cat("You are in 10_count working directory")
-        if (j == 1){
-          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2")
-          cat("you are in 10_count/Rl_PA_0.2 working directory")
-          if (l == 1){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_10%")
-            cat("You are in 10_count/Rl_PA_0.2/surv_top_10% working directory")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 2){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_20%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 3){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_25%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if ( l == 4){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_30%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 5){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_35%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 6){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_40%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 7){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_50%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          
-        } 
-        else if (j == 2){
-          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/")
-          cat("you are in 10_count/Rl_PA_0.25 working directory")
-          if (l == 1){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_10%")
-            cat("You are in 10_count/Rl_PA_0.25/surv_top_10% working directory")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 2){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_20%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 3){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_25%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if ( l == 4){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_30%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 5){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_35%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 6){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_40%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 7){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_50%/")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          
+        if (l ==5){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_35%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
         }
-        else if (j == 3){
-          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/")
-          cat("you are in 10_count/Rl_PA_0.3 working directory")
-          if (l == 1){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_10%")
-            cat("You are in 10_count/Rl_PA_0.3/surv_top_10% working directory")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 2){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_20%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 3){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_25%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if ( l == 4){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_30%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 5){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_35%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 6){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_40%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 7){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_50%/")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          
+        if ( l == 6){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_40%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
         }
-        else {
-          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/")
-          cat("you are in 10_count/Rl_PA_0.5 working directory")
-          if (l == 1){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_10%")
-            cat("You are in 10_count/Rl_PA_0.5/surv_top_10% working directory")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 2){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_20%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 3){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_25%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if ( l == 4){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_30%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 5){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_35%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 6){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_40%")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-          else if (l == 7){
-            setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_50%/")
-            write.csv(gene_df, 'all_gene.csv')
-            write.csv(prom_df, 'all_prom.csv')
-          }
-        } 
+        if (l == 7){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.2/surv_top_50%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
         
-      } 
+      }
+      if (j ==2){
+        if (l == 1){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_10%")
+          cat("You are in 10_count/Rl_PA_0.25/surv_top_10% working directory")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if (l ==2){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_20%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if (l == 3){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_25%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+          
+        }
+        else if ( l ==4){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_30%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if (l ==5){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_35%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if ( l == 6){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_40%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if (l == 7){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.25/surv_top_50%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        
+      }
+      if (j == 3){
+        if (l == 1){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_10%")
+          cat("You are in 10_count/Rl_PA_0.25/surv_top_10% working directory")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if (l ==2){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_20%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if (l == 3){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_25%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+          
+        }
+        else if ( l ==4){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_30%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if (l ==5){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_35%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if ( l == 6){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_40%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        else if (l == 7){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.3/surv_top_50%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        
+      }
+      if (j == 4){
+        if (l == 1){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_10%")
+          cat("You are in 10_count/Rl_PA_0.5/surv_top_10% working directory")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        if (l ==2){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_20%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        if (l == 3){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_25%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+          
+        }
+        if ( l ==4){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_30%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        if (l ==5){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_35%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        if ( l == 6){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_40%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        if (l == 7){
+          setwd("~/proActiv/iteration/10_counts/Rl_PA_0.5/surv_top_50%/")
+          write.csv(gene_df, 'all_gene.csv')
+          write.csv(prom_df, 'all_prom.csv')
+          write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+          write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+          write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+          write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+          write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+          write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+          write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+          write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+          write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+          write.csv(output, 'output.csv')
+        }
+        
+      }
+      
     }
+    
     setwd("~/proActiv/univariate_surv_proActiv")
+    
   }
-} 
-
 
 
 
