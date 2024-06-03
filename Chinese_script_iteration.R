@@ -58,9 +58,7 @@ colnames(promoter_counts) <- gsub("_SJ.out", "", colnames(promoter_counts))
 p_counts <- merge( filtered_df, promoter_counts, by.x = "promoterId", by.y = 'row.names')
 dim(p_counts) ##24120   363
 
-# count_level = c(5, 10)
-# length(count_level)
-# for (i in 1:length(count_level)){
+
   gene_lists <- list()
   
   for (sample_col in colnames(p_counts)[4:ncol(p_counts)]) {
