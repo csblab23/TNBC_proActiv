@@ -1,8 +1,8 @@
 ## RUN ITERATIONS ON INDIAN DATASET:
 ## NOTE: These Indian samples were processed using the chinese gtf file
-## 4 RELATIVE LEVELS AND 7 SURV LEVELS
+## here we are taking REL PA > 0.05, 0.1, 0.15
 
-setwd("~/108_TNBCs_reprocessed")
+setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf")
 
 library("survival")
 library("survminer")
@@ -16,81 +16,102 @@ library(sva)
 library(survival)
 
 # load the metafile  
-metadata <- as.data.frame(read_csv("Indian_meta_TNBC.csv"))
+metadata <- as.data.frame(read_csv("./Indian_meta_TNBC.csv"))
 metadata[1:5,1:5]
-dim(metadata) #108  11
+metadata=metadata[,-1]
+dim(metadata) # 108  10
 colnames(metadata)
 table(metadata$Batch)
-table(metadata$Tumor) #108 -- tumor sample
-table(metadata$TNBC) #108 -- TNBC tumor sample
-
-
-subset_metadata <- metadata[, c('Sample', 'Batch', 'TNBC', "RECC/PROG_IF_ANY,", "DFS_(DISEASE_FREE_SURVIVAL)", 'hospital', 'Sample_countsheet')]
-dim(subset_metadata) # 108   7
+#  1  2  3  4  5  6  7  8  9 10 11 12 13 15 
+# 10  5  1 15 20 17  7  3  5  9  4  2  4  6 
+table(metadata$Tumor)
+# Tumor 
+# 108
+table(metadata$TNBC)
+#  TNBC 
+#  108 
 
 #taking only TNBC sample from RG
-subset_metadata = subset_metadata %>% 
-  filter(TNBC == 'TNBC' & hospital == 'Rajiv Gandhi')
-dim(subset_metadata) #99  7
+subset_metadata = metadata %>% 
+  filter(hospital == 'Rajiv Gandhi')
+dim(subset_metadata) # 99  10
+subset_metadata$`DFS_(DISEASE_FREE_SURVIVAL)` <- gsub("Days|days","",subset_metadata$`DFS_(DISEASE_FREE_SURVIVAL)`)
+subset_metadata <- subset_metadata[!subset_metadata$`DFS_(DISEASE_FREE_SURVIVAL)`=="TREATMENT ONGOING",]
+subset_metadata$`DFS_(DISEASE_FREE_SURVIVAL)`<- as.numeric(subset_metadata$`DFS_(DISEASE_FREE_SURVIVAL)`)
+subset_metadata<- subset_metadata[subset_metadata$`DFS_(DISEASE_FREE_SURVIVAL)`>0,]
+subset_metadata<- na.omit(subset_metadata)
+dim(subset_metadata) # 91  10
 
-str(subset_metadata)
-subset_metadata_1 <- subset_metadata[!is.na(subset_metadata$`DFS_(DISEASE_FREE_SURVIVAL)`), ]
-subset_metadata_1 <- subset_metadata_1[subset_metadata_1$`DFS_(DISEASE_FREE_SURVIVAL)` != 'TREATMENT ONGOING', ]
-dim(subset_metadata_1) # 116   7
-str(subset_metadata_1)
-subset_metadata_1$DFS_in_days <- as.numeric(gsub(' Days', '', subset_metadata_1$`DFS_(DISEASE_FREE_SURVIVAL)`, ignore.case = TRUE))
-str(subset_metadata_1)
-subset_metadata_1 <- subset_metadata_1[subset_metadata_1$DFS_in_days > 0, ]
-dim(subset_metadata_1) # 91  8
+# rename this column properly
+dfs_col <- grep("DFS",colnames(subset_metadata))
+colnames(subset_metadata)[dfs_col] <- "DFS_in_days"
+dim(subset_metadata)  # 91  10
 
-#reading RDS file
-result2_indian <- readRDS("result2_108TNBCs.rds")
+# reading RDS file
+result2_indian <- readRDS('./result2_108TNBCs.rds')
 dim(result2_indian) # 53910   108
 rowData(result2_indian)
 result2_promoter = rowData(result2_indian)
 head(result2_promoter)
 result2_promoter = as.data.frame(result2_promoter)
-dim(result2_promoter) # 53910     8
+dim(result2_promoter) # 53910   8
 
-#taking >=2 promoters gene
+# Read the feature counts file
+count <- as.data.frame(read_csv("Indian_featurecounts.csv"))
+dim(count) # 62700   110
+
+# taking >=2 promoters gene
 filtered_df <- result2_promoter %>%
   group_by(geneId) %>%
   filter(n() >= 2) %>%
   mutate(ID = paste('pr', promoterId, '_', geneId, sep=''))
-dim(filtered_df) #24120     9
+dim(filtered_df) #  24120     9
 
 filtered_df <- filtered_df[, c('promoterId','geneId', 'ID')]
-dim(filtered_df) # 24120     3 -- no. of promoters
-length(unique(filtered_df$geneId)) #9315
+dim(filtered_df) #  24120   3
+length(unique(filtered_df$geneId)) # 9315
 
 table(table(filtered_df$geneId))
+#    2    3    4    5    6    7    8    9   10   11   12   13   14   16   17   18   33 
+# 6167 1941  697  274   95   59   36   13    8   10    7    1    1    3    1    1    1
 
+# read the promoter counts
 promoter_counts <- as.data.frame(result2_indian@assays@data@listData$promoterCounts)
-length(intersect(filtered_df$promoterId, rownames(promoter_counts)))  ## 81090
+length(intersect(filtered_df$promoterId, rownames(promoter_counts)))  # 24120
 keep = intersect(filtered_df$promoterId, rownames(promoter_counts))
 promoter_counts <- promoter_counts[keep,]
-dim(promoter_counts) #24120   108
+dim(promoter_counts) # 24120   108
+promoter_counts[1:5,1:5]
 colnames(promoter_counts) <- gsub("SJ.out", "", colnames(promoter_counts))
 colnames(promoter_counts) <- gsub("^X", "", colnames(promoter_counts))
-colnames(promoter_counts) <- gsub("\\.", "-", colnames(promoter_counts))
-all(colnames(promoter_counts) %in% subset_metadata_1$Sample)
-length(setdiff(colnames(promoter_counts), subset_metadata_1$Sample))
-promoter_counts = promoter_counts[,subset_metadata_1$Sample]
-all(colnames(promoter_counts) %in% subset_metadata_1$Sample)
-length(setdiff(colnames(promoter_counts), subset_metadata_1$Sample))
-dim(promoter_counts) #24120    99
-#merge the DFs
+colnames(promoter_counts) <- gsub("_ME","",colnames(promoter_counts))
+colnames(promoter_counts) <- gsub("\\.","-",colnames(promoter_counts))
+
+subset_metadata$Sample <- gsub("_ME","",subset_metadata$Sample)
+
+a=intersect(subset_metadata$Sample,colnames(promoter_counts))
+length(a)  # 91
+d = setdiff(subset_metadata$Sample,colnames(promoter_counts))
+length(d)  #  0
+
+promoter_counts <- promoter_counts[,colnames(promoter_counts) %in% subset_metadata$Sample]
+promoter_counts <- promoter_counts[,subset_metadata$Sample]
+all(colnames(promoter_counts)==subset_metadata$Sample)  # TRUE
+dim(promoter_counts)  # 24120    91
+
+# merge the DFs
 p_counts <- merge( filtered_df, promoter_counts, by.x = "promoterId", by.y = 'row.names')
-dim(p_counts) ##24120   102
+dim(p_counts) # 24120   94
+p_counts[1:5,1:5]
 
+# Select genes with atleast 2 promoters having count >5 or >10 (depending upon the iteration being run)
 gene_lists <- list()
-
 for (sample_col in colnames(p_counts)[4:ncol(p_counts)]) {
   cat("Processing sample:", sample_col, "\n")
   filtered_genes <- c()
   for (gene in unique(p_counts$geneId)) {
     gene_counts <- p_counts[p_counts$geneId == gene, sample_col]
-    num_ids_gt_threshold <- sum(gene_counts > 10)
+    num_ids_gt_threshold <- sum(gene_counts > 5)
     if (num_ids_gt_threshold >= 2) {
       filtered_genes <- c(filtered_genes, gene)
     }
@@ -98,41 +119,48 @@ for (sample_col in colnames(p_counts)[4:ncol(p_counts)]) {
   gene_lists[[sample_col]] <- filtered_genes
 }
 
-# #for taking genes that are present in atleast 60% of samples
+# Now take the genes that are present in atleast 60% of samples
 n_samples <- length(gene_lists)
 ensg_freq <- table(unlist(gene_lists))
 threshold <- round(0.6 * n_samples)
 ensg_60percent <- names(ensg_freq[ensg_freq >= threshold])
-length(ensg_60percent) 
-dim(filtered_df) 
-length(unique(filtered_df$geneId)) #18341
+length(ensg_60percent) # 257
+dim(filtered_df) #  24120     3
+length(unique(filtered_df$geneId)) # 9315
 filtered_df <- filtered_df[filtered_df$geneId %in% ensg_60percent,]
-dim(filtered_df)  #912   3
-length(unique(filtered_df$geneId)) #267
+dim(filtered_df)  #  882   3
+length(unique(filtered_df$geneId)) # 257
 table(table(filtered_df$geneId))
-# 2  3  4  5  6  7  8 11 12 18 33 
-# 98 90 41 19  4  6  3  2  2  1  1 
+#  2  3  4  5  6  7  8 11 12 18 33 
+# 93 88 40 17  4  6  3  2  2  1  1 
 
+# read the relative counts df now
 Rl_counts <- as.data.frame(result2_indian@assays@data@listData$relativePromoterActivity)
-dim(Rl_counts) #53910   108
+dim(Rl_counts) # 53910   108
 Rl_counts <- Rl_counts[complete.cases(Rl_counts),]
-dim(Rl_counts) #754 108
-length(intersect(filtered_df$promoterId, rownames(Rl_counts)))  #423
+dim(Rl_counts) # 754 108
+length(intersect(filtered_df$promoterId, rownames(Rl_counts)))  # 418
 keep = intersect(filtered_df$promoterId, rownames(Rl_counts))
 Rl_counts <- Rl_counts[keep,]
-dim(Rl_counts) #423 108
+dim(Rl_counts) # 418  108
+Rl_counts[1:5,1:5]
 colnames(Rl_counts) <- gsub("SJ.out", "", colnames(Rl_counts))
-colnames(Rl_counts) <- gsub("^X", "", colnames(Rl_counts))
-colnames(Rl_counts) <- gsub("\\.", "-", colnames(Rl_counts))
-all(colnames(Rl_counts) %in% subset_metadata_1$Sample)
-length(setdiff(colnames(Rl_counts), subset_metadata_1$Sample))
-Rl_counts = Rl_counts[,subset_metadata_1$Sample]
-all(colnames(Rl_counts) %in% subset_metadata_1$Sample)
-length(setdiff(colnames(Rl_counts), subset_metadata_1$Sample))
-dim(Rl_counts) # 418  91
+colnames(Rl_counts) <- gsub("^X","",colnames(Rl_counts))
+colnames(Rl_counts) <- gsub("_ME","",colnames(Rl_counts))
+colnames(Rl_counts) <- gsub("\\.","-",colnames(Rl_counts))
 
-Rl_count_level <- c(0.2, 0.25, 0.3, 0.5)
-length(Rl_count_level)
+a=intersect(subset_metadata$Sample,colnames(Rl_counts))
+length(a)  # 91
+d=setdiff(subset_metadata$Sample,colnames(Rl_counts))
+length(d)  # 0
+
+Rl_counts <- Rl_counts[,colnames(Rl_counts) %in% a]
+Rl_counts <- Rl_counts[,subset_metadata$Sample]
+all(subset_metadata$Sample==colnames(Rl_counts))  # TRUE
+
+## now apply loop: 
+Rl_count_level <- c(0.05, 0.1, 0.15)
+length(Rl_count_level) # 3
 for (j in 1:length(Rl_count_level)){
   tobetaken_rel <- rowSums(Rl_counts > Rl_count_level[j]) >= dim(Rl_counts)[2]*0.1
   table(tobetaken_rel)
@@ -156,17 +184,15 @@ for (j in 1:length(Rl_count_level)){
     column_to_rownames("Geneid") %>% 
     subset(., select = -1) %>% 
     filter(rownames(.) %in% filtered_df$geneId)
-  dim(count) #137 108
-  #taking only 121 sample
-  length(intersect(colnames(count), subset_metadata_1$Sample))
-  setdiff(colnames(count), subset_metadata_1$Sample)
-  subset_metadata_1$Sample <- gsub("_ME", "", subset_metadata_1$Sample)
-  all(colnames(count) %in% subset_metadata_1$Sample)
-  keep = intersect(colnames(count), subset_metadata_1$Sample)
-  count = count[,keep]
-  count = count[, subset_metadata_1$Sample]
-  all(colnames(count) == subset_metadata_1$Sample)
-  dim(count) # 137  91
+  dim(count) #88 420
+  
+  # taking same samples as metadata
+  length(intersect(colnames(count), subset_metadata$Sample))
+  keep = intersect(colnames(count), subset_metadata$Sample)
+  count = count[, keep]
+  count = count[,subset_metadata$Sample]
+  all(subset_metadata$Sample==colnames(count))
+  dim(count) # 62700    91
   cpm <- cpm(count)
   is.exprs <- rowSums(cpm>1) >= dim(count)[2]*0.1
   count <- count[is.exprs, ]
@@ -174,12 +200,21 @@ for (j in 1:length(Rl_count_level)){
   x <- calcNormFactors(x,method = "TMM")
   v <- voom(x, plot=F)
   vMat <- v$E
-  all(colnames(vMat) %in% subset_metadata_1$Sample)
-  setdiff(colnames(vMat), subset_metadata_1$Sample)
   
-  subset_metadata_1$Batch = as.factor(subset_metadata_1$Batch)
-  vMat_2 <- sva::ComBat(vMat, batch=subset_metadata_1$Batch)
-  dim(vMat_2) #137  91
+  # adjust batch effect:
+  dim(subset_metadata) # 91  10
+  table(subset_metadata$Batch)
+  #  1  2  3  4  5  6  7  8  9 10 11 12 13 15 
+  # 10  5  1 15 15 17  7  3  3  9  3  2  3  6 
+  common_samples <- intersect(colnames(vMat), subset_metadata$Sample)
+  vMat <- vMat[,common_samples]
+  vMat <- vMat[,subset_metadata$Sample]
+  all(colnames(vMat)==subset_metadata$Sample)
+  
+  subset_metadata$Batch = as.factor(subset_metadata$Batch)
+  vMat_2 <- sva::ComBat(vMat, batch=subset_metadata$Batch)
+  batch = subset_metadata$Batch
+  dim(vMat_2) # 88 121
   
   length(intersect(filtered_df$geneId , rownames(vMat_2)))
   dim(filtered_df) #176   3
@@ -187,12 +222,24 @@ for (j in 1:length(Rl_count_level)){
   dim(p_info) #176   3
   length(unique(p_info$geneId)) #88
   
-  
+  # read the absolute counts matrix
   Ab_counts <- as.data.frame(result2_indian@assays@data@listData$absolutePromoterActivity)
   Ab_counts <- Ab_counts[rownames(Ab_counts) %in% p_info$promoterId,]
   colnames(Ab_counts) <- gsub("SJ.out", "", colnames(Ab_counts))
-  dim(Ab_counts) #308 108
-  dim(p_info) #176     3
+  colnames(Ab_counts) <- gsub("^X","",colnames(Ab_counts))
+  colnames(Ab_counts) <- gsub("_ME","",colnames(Ab_counts))
+  colnames(Ab_counts) <- gsub("\\.","-",colnames(Ab_counts))
+  
+  a=intersect(subset_metadata$Sample,colnames(Ab_counts))
+  length(a)  # 91
+  d=setdiff(subset_metadata$Sample,colnames(Ab_counts))
+  length(d)  # 0
+  Ab_counts <- Ab_counts[,colnames(Ab_counts) %in% a,]
+  Ab_counts <- Ab_counts[,subset_metadata$Sample]
+  all(subset_metadata$Sample==colnames(Ab_counts))  # TRUE
+  
+  dim(Ab_counts) # 53910    91
+  dim(p_info)
   length(intersect(p_info$promoterId , rownames(Ab_counts))) # 55873
   p_info <- p_info[ p_info$promoterId %in% rownames(Ab_counts) ,]
   dim(p_info) #176    3
@@ -210,29 +257,27 @@ for (j in 1:length(Rl_count_level)){
   Ab_counts <- merge( p_info, Ab_counts, by.x= 'promoterId', by.y = 'row.names')
   rownames(Ab_counts) <- Ab_counts$ID
   Ab_counts <- Ab_counts[, c(-1, -2, -3)]
-  dim(Ab_counts) # 308 108
+  dim(Ab_counts) # 176  121
   
+  str(subset_metadata)
+  dim(subset_metadata) # 116   7
+  subset_metadata_1 <- subset_metadata
+  dim(subset_metadata)
   
-  
-  colnames(Ab_counts) <- gsub("^X", "", colnames(Ab_counts))
-  colnames(Ab_counts) <- gsub("\\.", "-", colnames(Ab_counts))
-  
-  length(intersect(subset_metadata_1$Sample, colnames(Ab_counts)))
-  setdiff(colnames(Ab_counts), subset_metadata_1$Sample)
-  colnames(Ab_counts) <- gsub("_ME", "", colnames(Ab_counts))
-  length(intersect(subset_metadata_1$Sample, colnames(Ab_counts)))
-  setdiff(colnames(Ab_counts), subset_metadata_1$Sample)
   Ab_counts <- Ab_counts[, subset_metadata_1$Sample]
+  all(subset_metadata_1$Sample==colnames(Ab_counts))
   dim(Ab_counts)# 176   113
   vMat_2 <- vMat_2[, subset_metadata_1$Sample]
-  dim(vMat_2) #308  91
+  all(subset_metadata_1$Sample==colnames(vMat_2))
+  dim(vMat_2) #88   113
+  
   tobetaken <- rowSums(Ab_counts > 0) >= dim(subset_metadata_1)[1]*0.1
   Ab_counts=Ab_counts[tobetaken,]
-  dim(Ab_counts) #308  91
+  dim(Ab_counts) #176 113
   
   subset_metadata_1$`RECC/PROG_IF_ANY,` = as.factor(subset_metadata_1$`RECC/PROG_IF_ANY,`)
   subset_metadata_1$dfs_status <- ifelse(subset_metadata_1$`RECC/PROG_IF_ANY` == 'YES', 1, 0)
-  dim(subset_metadata_1) #91  9
+  
   
   
   surv_level = c(0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5)  
@@ -274,12 +319,12 @@ for (j in 1:length(Rl_count_level)){
       return(temp_p)
     }
     
-    for (sample_col in colnames(prom_matrix)[10:ncol(prom_matrix)]) {
+    for (sample_col in colnames(prom_matrix)[13:ncol(prom_matrix)]) {
       prom_p_values[[sample_col]] <- perform_survival_analysis(prom_matrix, sample_col)
       cat("Promoter P-value for", sample_col, ":", prom_p_values[[sample_col]], "\n")
     }
     
-    for (sample_col in colnames(gene_matrix)[10:ncol(gene_matrix)]) {
+    for (sample_col in colnames(gene_matrix)[13:ncol(gene_matrix)]) {
       gene_p_values[[sample_col]] <- perform_survival_analysis(gene_matrix, sample_col)
       cat("Gene P-value for", sample_col, ":", gene_p_values[[sample_col]], "\n")
     }
@@ -313,8 +358,8 @@ for (j in 1:length(Rl_count_level)){
     
     if (j == 1){
       if (l == 1){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_10%")
-        cat("You are in 5_count/Rl_PA_0.2/surv_top_10% working directory")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.05/surv_top_10%")
+        cat("You are in 5_count/Rl_PA_0.1/surv_top_10% working directory")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -329,7 +374,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       if (l ==2){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_20%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.05/surv_top_20%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -344,7 +389,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       if (l == 3){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_25%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.05/surv_top_25%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -360,7 +405,7 @@ for (j in 1:length(Rl_count_level)){
         
       }
       if ( l ==4){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_30%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.05/surv_top_30%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -375,7 +420,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       if (l ==5){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_35%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.05/surv_top_35%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -390,7 +435,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       if ( l == 6){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_40%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.05/surv_top_40%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -405,7 +450,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       if (l == 7){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.2/surv_top_50%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.05/surv_top_50%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -423,8 +468,8 @@ for (j in 1:length(Rl_count_level)){
     }
     if (j ==2){
       if (l == 1){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_10%")
-        cat("You are in 10_count/Rl_PA_0.25/surv_top_10% working directory")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.1/surv_top_10%")
+        cat("You are in 5_count/Rl_PA_0.01/surv_top_10% working directory")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -439,7 +484,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if (l ==2){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_20%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.1/surv_top_20%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -454,7 +499,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if (l == 3){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_25%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.1/surv_top_25%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -470,7 +515,7 @@ for (j in 1:length(Rl_count_level)){
         
       }
       else if ( l ==4){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_30%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.1/surv_top_30%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -485,7 +530,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if (l ==5){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_35%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.1/surv_top_35%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -500,7 +545,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if ( l == 6){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_40%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.1/surv_top_40%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -515,7 +560,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if (l == 7){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.25/surv_top_50%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.1/surv_top_50%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -533,8 +578,8 @@ for (j in 1:length(Rl_count_level)){
     }
     if (j == 3){
       if (l == 1){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_10%")
-        cat("You are in 10_count/Rl_PA_0.25/surv_top_10% working directory")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.15/surv_top_10%")
+        cat("You are in 5_count/Rl_PA_0.15/surv_top_10% working directory")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -549,7 +594,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if (l ==2){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_20%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.15/surv_top_20%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -564,7 +609,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if (l == 3){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_25%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.15/surv_top_25%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -580,7 +625,7 @@ for (j in 1:length(Rl_count_level)){
         
       }
       else if ( l ==4){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_30%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.15/surv_top_30%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -595,7 +640,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if (l ==5){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_35%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.15/surv_top_35%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -610,7 +655,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if ( l == 6){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_40%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.15/surv_top_40%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -625,7 +670,7 @@ for (j in 1:length(Rl_count_level)){
         write.csv(output, 'output.csv')
       }
       else if (l == 7){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.3/surv_top_50%/")
+        setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf/10_counts/Rl_PA_0.15/surv_top_50%/")
         write.csv(gene_df, 'all_gene.csv')
         write.csv(prom_df, 'all_prom.csv')
         write.csv(prom_sig_result, "prom_sig_pvalue.csv")
@@ -641,126 +686,131 @@ for (j in 1:length(Rl_count_level)){
       }
       
     }
-    if (j == 4){
-      if (l == 1){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_10%")
-        cat("You are in 5_counts/Rl_PA_0.5/surv_top_10% working directory")
-        write.csv(gene_df, 'all_gene.csv')
-        write.csv(prom_df, 'all_prom.csv')
-        write.csv(prom_sig_result, "prom_sig_pvalue.csv")
-        write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
-        write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
-        write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
-        write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
-        write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
-        write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
-        write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
-        write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
-        write.csv(output, 'output.csv')
-      }
-      if (l ==2){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_20%/")
-        write.csv(gene_df, 'all_gene.csv')
-        write.csv(prom_df, 'all_prom.csv')
-        write.csv(prom_sig_result, "prom_sig_pvalue.csv")
-        write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
-        write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
-        write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
-        write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
-        write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
-        write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
-        write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
-        write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
-        write.csv(output, 'output.csv')
-      }
-      if (l == 3){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_25%/")
-        write.csv(gene_df, 'all_gene.csv')
-        write.csv(prom_df, 'all_prom.csv')
-        write.csv(prom_sig_result, "prom_sig_pvalue.csv")
-        write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
-        write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
-        write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
-        write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
-        write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
-        write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
-        write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
-        write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
-        write.csv(output, 'output.csv')
-        
-      }
-      if ( l ==4){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_30%/")
-        write.csv(gene_df, 'all_gene.csv')
-        write.csv(prom_df, 'all_prom.csv')
-        write.csv(prom_sig_result, "prom_sig_pvalue.csv")
-        write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
-        write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
-        write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
-        write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
-        write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
-        write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
-        write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
-        write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
-        write.csv(output, 'output.csv')
-      }
-      if (l ==5){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_35%/")
-        write.csv(gene_df, 'all_gene.csv')
-        write.csv(prom_df, 'all_prom.csv')
-        write.csv(prom_sig_result, "prom_sig_pvalue.csv")
-        write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
-        write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
-        write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
-        write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
-        write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
-        write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
-        write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
-        write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
-        write.csv(output, 'output.csv')
-      }
-      if ( l == 6){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_40%/")
-        write.csv(gene_df, 'all_gene.csv')
-        write.csv(prom_df, 'all_prom.csv')
-        write.csv(prom_sig_result, "prom_sig_pvalue.csv")
-        write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
-        write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
-        write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
-        write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
-        write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
-        write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
-        write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
-        write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
-        write.csv(output, 'output.csv')
-      }
-      if (l == 7){
-        setwd("~/proActiv/iteration/5_counts/Rl_PA_0.5/surv_top_50%/")
-        write.csv(gene_df, 'all_gene.csv')
-        write.csv(prom_df, 'all_prom.csv')
-        write.csv(prom_sig_result, "prom_sig_pvalue.csv")
-        write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
-        write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
-        write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
-        write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
-        write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
-        write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
-        write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
-        write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
-        write.csv(output, 'output.csv')
-      }
+    # if (j == 4){
+    #   if (l == 1){
+    #     setwd("C:/Users/Simran/Desktop/Promoter activity project/loop_pipeline_updated_March21/Iterations_may30/Indian_dataset/5_counts/Rl_PA_0.5/surv_top_10%")
+    #     cat("You are in 5_counts/Rl_PA_0.5/surv_top_10% working directory")
+    #     write.csv(gene_df, 'all_gene.csv')
+    #     write.csv(prom_df, 'all_prom.csv')
+    #     write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+    #     write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+    #     write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+    #     write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+    #     write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+    #     write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+    #     write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+    #     write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+    #     write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+    #     write.csv(output, 'output.csv')
+    #   }
+    #   if (l ==2){
+    #     setwd("C:/Users/Simran/Desktop/Promoter activity project/loop_pipeline_updated_March21/Iterations_may30/Indian_dataset/5_counts/Rl_PA_0.5/surv_top_20%/")
+    #     write.csv(gene_df, 'all_gene.csv')
+    #     write.csv(prom_df, 'all_prom.csv')
+    #     write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+    #     write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+    #     write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+    #     write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+    #     write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+    #     write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+    #     write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+    #     write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+    #     write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+    #     write.csv(output, 'output.csv')
+    #   }
+    #   if (l == 3){
+    #     setwd("C:/Users/Simran/Desktop/Promoter activity project/loop_pipeline_updated_March21/Iterations_may30/Indian_dataset/5_counts/Rl_PA_0.5/surv_top_25%/")
+    #     write.csv(gene_df, 'all_gene.csv')
+    #     write.csv(prom_df, 'all_prom.csv')
+    #     write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+    #     write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+    #     write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+    #     write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+    #     write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+    #     write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+    #     write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+    #     write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+    #     write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+    #     write.csv(output, 'output.csv')
+    #     
+    #   }
+    #   if ( l ==4){
+    #     setwd("C:/Users/Simran/Desktop/Promoter activity project/loop_pipeline_updated_March21/Iterations_may30/Indian_dataset/5_counts/Rl_PA_0.5/surv_top_30%/")
+    #     write.csv(gene_df, 'all_gene.csv')
+    #     write.csv(prom_df, 'all_prom.csv')
+    #     write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+    #     write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+    #     write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+    #     write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+    #     write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+    #     write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+    #     write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+    #     write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+    #     write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+    #     write.csv(output, 'output.csv')
+    #   }
+    #   if (l ==5){
+    #     setwd("C:/Users/Simran/Desktop/Promoter activity project/loop_pipeline_updated_March21/Iterations_may30/Indian_dataset/5_counts/Rl_PA_0.5/surv_top_35%/")
+    #     write.csv(gene_df, 'all_gene.csv')
+    #     write.csv(prom_df, 'all_prom.csv')
+    #     write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+    #     write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+    #     write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+    #     write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+    #     write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+    #     write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+    #     write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+    #     write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+    #     write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+    #     write.csv(output, 'output.csv')
+    #   }
+    #   if ( l == 6){
+    #     setwd("C:/Users/Simran/Desktop/Promoter activity project/loop_pipeline_updated_March21/Iterations_may30/Indian_dataset/5_counts/Rl_PA_0.5/surv_top_40%/")
+    #     write.csv(gene_df, 'all_gene.csv')
+    #     write.csv(prom_df, 'all_prom.csv')
+    #     write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+    #     write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+    #     write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+    #     write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+    #     write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+    #     write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+    #     write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+    #     write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+    #     write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+    #     write.csv(output, 'output.csv')
+    #   }
+    #   if (l == 7){
+    #     setwd("C:/Users/Simran/Desktop/Promoter activity project/loop_pipeline_updated_March21/Iterations_may30/Indian_dataset/5_counts/Rl_PA_0.5/surv_top_50%/")
+    #     write.csv(gene_df, 'all_gene.csv')
+    #     write.csv(prom_df, 'all_prom.csv')
+    #     write.csv(prom_sig_result, "prom_sig_pvalue.csv")
+    #     write.csv(prom_sig_result_adj, "prom_sig_fdr.csv")
+    #     write.csv(gene_sig_result, 'gene_sig_pvalue.csv')
+    #     write.csv(gene_sig_result_adj, 'gene_sig_fdr_0.1.csv')
+    #     write.csv(gene_nonsig_result, 'gene_nonsig_pvalue.csv')
+    #     write.csv(gene_nonsig_result_adj, 'gene_nonsig_fdr_0.1.csv')
+    #     write.csv(com_p_g_sig_pv, 'com_p_g_sig_pv.csv')
+    #     write.csv(com_p_sig_g_nonsig_pv, 'com_p_sig_g_nonsig_pv.csv')
+    #     write.csv(com_p_sig_pv_g_nonsig_fdr, 'com_p_sig_pv_g_nonsig_fdr.csv')
+    #     write.csv(output, 'output.csv')
+    #   }
       
     }
     
-    
-    
-    
+  setwd("~/Promoter_activity/proActiv/indian_dataset/iteration_28may/with_new_gtf")
     
   }
   
-  setwd("~/108_TNBCs_reprocessed")
-  
-}
+
+
+
+
+####################################
+
+
+
+
+
 
 
 
