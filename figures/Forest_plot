@@ -1,0 +1,147 @@
+#CONSTRUCTING FOREST PLOTS
+
+setwd("~/proActiv/univariate_surv_proActiv")
+
+# Load required packages
+library("survival")
+library("survminer")
+library("proActiv")
+library(data.table)
+library(dplyr)
+library(tidyverse)
+library(readxl)
+library(limma)
+library(edgeR)
+library(sva)
+
+metadata <- as.data.frame(read_csv("meta_with_batchinfo.csv"))
+colnames(metadata)
+# Data preprocessing
+metadata <- metadata[, -1]  # Remove extra column
+metadata <- metadata %>%
+  mutate(Tumor_Normal1 = case_when(
+    Tumor_Normal %in% c("TumorTissue", "TumorTissue.2018", "TumorTissue.rep") ~ "Tumor",
+    Tumor_Normal %in% c("PairedNormalTissue", "PairedNormalTissue.rep") ~ "AdjNormal"
+  ))
+dim(metadata) #448  99
+rownames(metadata) <- metadata$Run
+tumor_metadata <- subset(metadata, Tumor_Normal1 == 'Tumor')
+dim(tumor_metadata) #360  99
+
+colnames(tumor_metadata)
+table(tumor_metadata$CNA_Subtype)
+
+surv_metadata =tumor_metadata[tumor_metadata$RFS_time_Months > 0,]
+dim(surv_metadata) #358  99
+surv_metadata=surv_metadata[,c("Project_ID", "Run", "batch", "Tumor_Normal", "Tumor_Normal1", "RFS_Status", "RFS_time_Days", "RFS_time_Months", 'CNA_Subtype', 'Grade')]
+dim(surv_metadata) #358  10
+
+filter_data <- surv_metadata %>%
+  mutate(CNA_Subtype = replace_na(CNA_Subtype, 'unknown'),
+         Grade = replace_na(Grade, 'unknown'))
+
+dim(filter_data) #358  10
+str(filter_data)
+filter_data$CNA_Subtype = as.factor(filter_data$CNA_Subtype)
+filter_data$Grade = as.factor(filter_data$Grade)
+str(filter_data)
+
+library(ggforestplot)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(broom)
+library(survival)
+library(ggforestplot)
+#BiocManager::install('survivalAnalysis')
+library(survivalAnalysis)
+
+dim(prom_matrix) #358 494
+dim(gene_matrix) #358 251
+dim(mm_finaldf) #358 494
+
+all(filter_data$Run == mm_finaldf$Run)
+surv_metadata_1 <- filter_data[mm_finaldf$Run,]
+dim(surv_metadata_1) #358  10
+all(surv_metadata_1$Run == mm_finaldf$Run)
+
+grep('ENSG00000086758.17', colnames(mm_finaldf))
+colnames(mm_finaldf)[227] #"pr3004_ENSG00000086758.17"
+
+input_df <- data.frame(Sample = mm_finaldf$Run, time = mm_finaldf$RFS_time_Months, event = mm_finaldf$RFS_Status, pr3_exp = mm_finaldf$pr3004_ENSG00000086758.17,  
+                       pr1_exp = mm_finaldf$pr5988_ENSG00000108312.16,  CNA_Subtype = surv_metadata_1$CNA_Subtype)
+str(input_df)
+class(input_df)
+
+input_df_2 <- input_df %>%
+  mutate(CNA_Subtype = case_when(
+    CNA_Subtype == 'Chr12p13_amp' ~ 'Chr12p13_amp',
+    CNA_Subtype == 'Chr13q34_amp' ~ 'Chr13q34_amp',
+    CNA_Subtype == 'Chr20q13_amp' ~ 'Chr20q13_amp',
+    CNA_Subtype == 'Chr8p21_del' ~ 'Chr8p21_del',
+    CNA_Subtype == 'Chr9p23_amp' ~ 'Chr9p23_amp',
+    CNA_Subtype == 'Low_CIN' ~ 'Low_CIN',
+    CNA_Subtype == 'unknown' ~ 'unknown'
+  ))
+
+str(input_df_2)
+input_df_2$CNA_Subtype <- as.factor(input_df_2$CNA_Subtype)
+str(input_df_2)
+levels(input_df_2$CNA_Subtype)
+input_df_2$CNA_Subtype <- relevel(input_df_2$CNA_Subtype, ref = 'Low_CIN')
+
+
+input_df_2 <- input_df_2 %>% 
+  mutate(pr1_exp = case_when(
+    pr1_exp == 'high' ~ 'High UBTF pr1',
+    pr1_exp == 'low' ~ 'Low UBTF pr1'
+  ))
+
+input_df_2$pr1_exp <- as.factor(input_df_2$pr1_exp)
+str(input_df_2)
+levels(input_df_2$pr1_exp)
+# input_df_2$pr1_exp <- relevel(input_df_2$pr1_exp, ref = 'Low UBTF pr1')
+
+input_df_2 <- input_df_2 %>% 
+  mutate(pr3_exp = case_when(
+    pr3_exp == 'high' ~ 'High HUWE1 pr3',
+    pr3_exp == 'low' ~ 'Low HUWE1 pr3'
+  ))
+
+input_df_2$pr3_exp <- as.factor(input_df_2$pr3_exp)
+str(input_df_2)
+levels(input_df_2$pr3_exp)
+# input_df_2$pr3_exp <- relevel(input_df_2$pr3_exp, ref = 'Low HUWE1 pr3')
+str(input_df_2)
+
+
+# Cox model specification with factor
+cox_model <- coxph(Surv(time = time, event = event) ~ pr1_exp + pr3_exp + CNA_Subtype, data = input_df_2)
+
+# Summarize the Cox model
+summary(cox_model)
+
+# Visualization with ggforest
+#forest_plot <- ggforest(model = cox_model, main = 'Forest plot')
+
+forest_plot <- ggforest(model = cox_model, 
+                        data = input_df_2,  # Add this line
+                        main = '',
+                        fontsize = 10,
+          
+                        refLabel = 'Reference')
+
+p <- forest_plot$plot +
+  theme(
+    text = element_text(family = "Arial", face = 'bold', size = 18),
+    axis.text = element_text(size = 18),
+    axis.title = element_text(size = 18)
+  )
+p
+
+
+
+
+
+
+
