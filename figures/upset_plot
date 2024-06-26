@@ -1,0 +1,60 @@
+#for making upset plot of all the common intersection possible between indian and chinese datasets
+
+library(ComplexHeatmap)
+library(UpSetR)
+library(grid)
+
+
+file1 = "~/proActiv/iteration2/iteration_pv_0.05/5_counts/Rl_PA_0.2/surv_top_10%/com_p_sig_g_nonsig_pv.csv"
+list1 = read_csv(file1)
+#chinese genes have after dot digits in the genes id, first remove those digits
+# list1$x = gsub("\\..*", "", list1$x)
+dim(list1)
+head(list1)
+
+file2 = "~/proActiv/iteration2/iteration_pv_0.05/5_counts/Rl_PA_0.2/surv_top_20%/com_p_sig_g_nonsig_pv.csv"
+list2 = read_csv(file2)
+dim(list2)
+head(list2)
+
+file3 =  "~/proActiv/iteration2/iteration_pv_0.05/5_counts/Rl_PA_0.2/surv_top_25%/com_p_sig_g_nonsig_pv.csv"
+list3 = read_csv(file3)
+dim(list3)
+
+file4 =  "~/proActiv/iteration2/iteration_pv_0.05/5_counts/Rl_PA_0.2/surv_top_30%/com_p_sig_g_nonsig_pv.csv"
+list4 = read_csv(file4)
+dim(list4)
+
+file5 =  "~/proActiv/iteration2/iteration_pv_0.05/5_counts/Rl_PA_0.2/surv_top_35%/com_p_sig_g_nonsig_pv.csv"
+list5 = read_csv(file5)
+dim(list5)
+
+file6 =  "~/proActiv/iteration2/iteration_pv_0.05/5_counts/Rl_PA_0.2/surv_top_40%/com_p_sig_g_nonsig_pv.csv"
+list6 = read_csv(file6)
+dim(list6)
+
+file7 = "~/proActiv/iteration2/iteration_pv_0.05/5_counts/Rl_PA_0.2/surv_top_50%/com_p_sig_g_nonsig_pv.csv"
+list7 = read_csv(file7)
+dim(list7)
+
+# file8 = '~/proActiv/iteration2/indian_iteration_pv_0.05/5_counts/Rl_PA_0.2/surv_top_50%/com_p_sig_g_nonsig_pv.csv'
+# list8 = read_csv(file8)
+# dim(list8)
+
+lt = list( ">5_counts_10%_chinese" = c(list1$x),
+           ">5_counts_20%_chinese" = c(list2$x),
+           ">5_counts_25%_chinese" = c(list3$x),
+           ">5_counts_30%_chinese" = c(list4$x), 
+           ">5_counts_35%_chinese" = c(list5$x), 
+           ">5_counts_40%_chinese" = c(list6$x),
+           ">5_counts_50%_chinese" = c(list7$x)
+           
+           
+)
+list_to_matrix(lt)
+m = make_comb_mat(lt)
+UpSet(m, top_annotation = upset_top_annotation(m, add_numbers = TRUE), 
+      right_annotation = upset_right_annotation(m, add_numbers = TRUE),
+      column_title = ("promoter_sig_gene_nonsig_pv"))
+
+?UpSet
