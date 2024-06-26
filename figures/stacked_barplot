@@ -1,0 +1,61 @@
+library(ggplot2)
+library(dplyr)
+
+result2 <- readRDS('result2.rds')
+dim(result2)
+result2_promoter = rowData(result2)
+result2_promoter = as.data.frame(result2_promoter)
+dim(result2_promoter)
+length(unique(result2_promoter$geneId))
+table(unname(table(result2_promoter$geneId)))
+
+
+pdata2 <- as_tibble(result2_promoter) %>%
+  mutate(promoterPosition = ifelse(promoterPosition > 5, 5, promoterPosition)) %>%
+  filter(Tumor.class %in% c('Minor', 'Major'))
+
+# Define the proportions -
+proportions <- c(0.72531998, 0.17276943, 0.05846782, 0.02235207, 0.02109071)
+
+# Calculate the cumulative positions
+positions <- cumsum(c(0, proportions))
+
+# Summarize the data to get counts for each promoterPosition
+pdata2_summary <- pdata2 %>%
+  group_by(promoterPosition, Tumor.class) %>%
+  summarize(count = n(), .groups = 'drop')
+
+# Add widths and center positions
+pdata2_summary <- pdata2_summary %>%
+  mutate(
+    width = proportions[as.integer(promoterPosition)],
+    center = (positions[as.integer(promoterPosition)] + positions[as.integer(promoterPosition) + 1]) / 2
+  )
+
+str(pdata2_summary)
+pdata2_summary$Tumor.class = as.factor(pdata2_summary$Tumor.class)
+levels(pdata2_summary$Tumor.class)
+pdata2_summary$Tumor.class <- relevel(pdata2_summary$Tumor.class, ref = "Minor")
+
+
+ggplot(pdata2_summary) +
+  geom_col(aes(x = center, y = count / sum(count), fill = Tumor.class, color = 'black'), 
+           width = pdata2_summary$width, position = 'fill') +
+  xlab(expression(Promoter ~ Position ~ "5'" %->% "3'")) + 
+  ylab('Proportion of promoter types') + 
+  labs(fill = 'Promoter Category') + 
+  ggtitle('') + 
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = paste0(seq(0, 100, 25), '%')) +
+  scale_x_continuous(breaks = (positions[-length(positions)] + positions[-1]) / 2, labels = c('1', '2', '3', '4', '>=5')) +
+  scale_color_manual(values = c("black")) +
+  scale_fill_manual(values = c("Minor" = "sandybrown", "Major" = "lightsteelblue3")) +
+  theme_classic() +
+  theme(legend.position = "right",
+        axis.text = element_text(size = 30, face = "bold", family = "Arial"),
+        axis.title = element_text(size = 20, face = "bold", family = "Arial"),
+        legend.text = element_text(size = 20, face = "bold", family = "Arial"),
+        axis.text.x = element_text(size = 19, angle = 90, hjust = 1, face = "bold", family = "Arial"),
+        legend.title = element_text(size = 20, face = "bold", family = "Arial")) +
+    
+    guides(fill = guide_legend(title = "Promoter Category"))
+
